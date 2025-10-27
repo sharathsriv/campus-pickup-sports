@@ -69,38 +69,37 @@ def get_game(game_id):
         doc["_id"] = str(doc["_id"])
     return doc
 
-def list_games(filter=None, limit=50):
-    query = filter or {}
-    cursor = games.find(query).limit(limit)
+def list_games(filter={"status": {"$in": ["scheduled", "ongoing"]}}):
+    cursor = games.find(filter)
     out = []
     for d in cursor:
         d["_id"] = str(d["_id"])
         out.append(d)
     return out
 
-def join_game(game_id, player_id):
-    """
-    Add a player to the roster if space available and not already in roster.
-    Returns updated doc or error.
-    """
-    oid = to_objectid(game_id)
-    pid = to_objectid(player_id)
-    if not oid or not pid:
-        return {"error": "invalid ids"}
+# def join_game(game_id, player_id):
+#     """
+#     Add a player to the roster if space available and not already in roster.
+#     Returns updated doc or error.
+#     """
+#     oid = to_objectid(game_id)
+#     pid = to_objectid(player_id)
+#     if not oid or not pid:
+#         return {"error": "invalid ids"}
 
-    # atomic check-and-update:
-    # only push if roster length < max_players and player not already in roster
-    # Mongo query uses $expr to compare sizes (requires Mongo 3.6+)
-    query = {
-        "_id": oid,
-        "status": "scheduled",
-        "$expr": {"$lt": [{"$size": "$roster"}, "$max_players"]},
-        "roster.player_id": {"$ne": pid}  # ensure not present
-    }
-    update = {
-        "$push": {"roster": {"player_id": pid, "joined_at": datetime.utcnow().isoformat(), "role": "player"}}
-    }
-    res = games.update_one(query, update)
-    if res.modified_count == 0:
-        return {"error": "could not join (full, cancelled, or already joined)"}
-    return get_game(game_id)
+#     # atomic check-and-update:
+#     # only push if roster length < max_players and player not already in roster
+#     # Mongo query uses $expr to compare sizes (requires Mongo 3.6+)
+#     query = {
+#         "_id": oid,
+#         "status": "scheduled",
+#         "$expr": {"$lt": [{"$size": "$roster"}, "$max_players"]},
+#         "roster.player_id": {"$ne": pid}  # ensure not present
+#     }
+#     update = {
+#         "$push": {"roster": {"player_id": pid, "joined_at": datetime.utcnow().isoformat(), "role": "player"}}
+#     }
+#     res = games.update_one(query, update)
+#     if res.modified_count == 0:
+#         return {"error": "could not join (full, cancelled, or already joined)"}
+#     return get_game(game_id)
