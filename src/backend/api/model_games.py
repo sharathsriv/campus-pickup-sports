@@ -3,10 +3,12 @@ from datetime import datetime, UTC
 import input_validator
 
 games = get_collection("games")
+games_today = get_collection("games_today")
 locations = get_collection("locations")
+players = get_collection("players")
 validator = input_validator.validator()
 
-def create_game(data):
+def create_game(data, games_store):
     """
     data is a dict with the following keys and their types:
         start_time (str): that can be parsed as datetime
@@ -18,7 +20,7 @@ def create_game(data):
     if not isinstance(data, dict):
         return {"error": "invalid data format"}
     
-    is_valid, msg = validator.validate_create_game(data)
+    is_valid, msg = validator.validate_create_game(data, games_store, locations, players)
     if not is_valid:
         return {"error": msg}
     
@@ -49,6 +51,7 @@ def create_game(data):
     else:
         result = games.insert_one(doc)
         return str(result.inserted_id) 
+
 
 def get_game(game_id):
     '''
