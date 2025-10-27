@@ -1,9 +1,9 @@
-# api/db.py
 import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from dotenv import load_dotenv
 from pathlib import Path
+import hashlib
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -21,5 +21,10 @@ def get_collection(name):
 def to_objectid(id_str):
     try:
         return ObjectId(id_str)
-    except Exception:
+    except Exception as e:
         return None
+
+def generate_id(created_by, created_at):
+    hash_input = f"{created_by}-{created_at}".encode('utf-8')
+    hash_output = hashlib.sha256(hash_input).hexdigest()
+    return to_objectid(hash_output[:24])
