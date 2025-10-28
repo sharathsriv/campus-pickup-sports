@@ -4,6 +4,8 @@ env/
 ENV/
 .venv/
 
+sports-app-db0cf-firebase-adminsdk-fbsvc-c0b41ab7ac.json
+__pycache__
 # macOS files
 .DS_Store
 
