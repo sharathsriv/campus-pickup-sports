@@ -49,8 +49,15 @@ class PlayersAccountAPIView(APIView):
         player_doc = model_players.get_user_profile(player_id)
         if player_doc is None:
             return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
-        player_doc['id'] = player_id
-        return Response(player_doc)
+        res = {
+            "id": player_id,
+            "name": player_doc.get("name"),
+            "email": player_doc.get("email"),
+            "past_games": [game.id for game in player_doc.get("past_games", [])],
+            "ongoing_games": [game.id for game in player_doc.get("ongoing_games", [])],
+            "upcoming_games": [game.id for game in player_doc.get("upcoming_games", [])],
+        }
+        return Response(res, status=status.HTTP_200_OK)
     """
     POST /api/players/{player_id}/  -> update player details
     """
@@ -107,15 +114,15 @@ class GamesListCreateAPIView(APIView):
         created_id = game_response.get("sucess")
         return Response({"id": created_id}, status=status.HTTP_201_CREATED)
 
-# class JoinGameAPIView(APIView):
-#     """
-#     POST /api/games/{game_id}/join/  -> payload: { "player_id": "<playerId>" }
-#     """
-#     def post(self, request, game_id):
-#         player_id = request.data.get("player_id")
-#         if not player_id:
-#             return Response({"error": "player_id required"}, status=status.HTTP_400_BAD_REQUEST)
-#         res = models_game.join_game(game_id, player_id)
-#         if "error" in res:
-#             return Response(res, status=status.HTTP_400_BAD_REQUEST)
-#         return Response(res)
+class JoinGameAPIView(APIView):
+    """
+    POST /api/games/{game_id}/join/  -> payload: { "player_id": "<playerId>" }
+    """
+    def post(self, request, game_id):
+        player_id = request.data.get("player_id")
+        if not player_id:
+            return Response({"error": "player_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        res = model_games.join_game(game_id, player_id)
+        if "error" in res:
+            return Response(res, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"success": f"Player {player_id} joined game {game_id}"}, status=status.HTTP_200_OK)

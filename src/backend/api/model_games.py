@@ -83,29 +83,46 @@ def list_games(status_list=["scheduled", "ongoing"]):
 
     return out
 
-# def join_game(game_id, player_id):
-#     """
-#     Add a player to the roster if space available and not already in roster.
-#     Returns updated doc or error.
-#     """
-#     oid = to_objectid(game_id)
-#     pid = to_objectid(player_id)
-#     if not oid or not pid:
-#         return {"error": "invalid ids"}
+def join_game(game_id, player_id):
+    """
+    Add a player to the roster if space available and not already in roster.
+    Returns updated doc or error.
+    """
+    game_ref = games.document(game_id)
+    game_doc = game_ref.get()
+    if not game_doc.exists:
+        return {"error": "Game not found"}
 
-#     # atomic check-and-update:
-#     # only push if roster length < max_players and player not already in roster
-#     # Mongo query uses $expr to compare sizes (requires Mongo 3.6+)
-#     query = {
-#         "_id": oid,
-#         "status": "scheduled",
-#         "$expr": {"$lt": [{"$size": "$roster"}, "$max_players"]},
-#         "roster.player_id": {"$ne": pid}  # ensure not present
-#     }
-#     update = {
-#         "$push": {"roster": {"player_id": pid, "joined_at": datetime.utcnow().isoformat(), "role": "player"}}
-#     }
-#     res = games.update_one(query, update)
-#     if res.modified_count == 0:
-#         return {"error": "could not join (full, cancelled, or already joined)"}
-#     return get_game(game_id)
+    game_data = game_doc.to_dict()
+    if game_data["status"] != "scheduled":
+        return {"error": "Cannot join a game that is not scheduled"}
+
+    roster = game_data.get("roster", [])
+    if any(player['player_id'].id == player_id for player in roster):
+        return {"error": "Player already in roster"}
+
+    if len(roster) >= game_data["max_players"]:
+        return {"error": "Game is full"}
+
+    player_ref = players.document(player_id)
+    if not player_ref.get().exists:
+        return {"error": "Player not found"}
+    
+    player_ref_data = player_ref.get().to_dict()
+    ongoing_games = player_ref_data.get("ongoing_games", []) + player_ref_data.get("upcoming_games", [])
+    for game_ref_in_list in ongoing_games:
+        game_in_list = game_ref_in_list.get().to_dict()
+        if not (game_data["end_time"] <= game_in_list["start_time"] or game_data["start_time"] >= game_in_list["end_time"]):
+            return {"error": "Player has a conflicting game at the same time"}
+
+    roster.append({
+        'player_id': players.document(player_id),
+        'joined_at': datetime.now(UTC),
+    })
+    game_ref.update({"roster": roster})
+    
+    scheduled_games = player_ref_data.get("upcoming_games", [])
+    scheduled_games.append(game_ref)
+    player_ref.update({"upcoming_games": scheduled_games})
+
+    return {"sucess":game_id}
