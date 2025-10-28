@@ -1,14 +1,22 @@
-from db import get_collection, to_objectid, generate_id
 from datetime import datetime, UTC
 import input_validator
+import hashlib
+from firebase_admin import auth, firestore
+import firebase_auth
 
-games = get_collection("games")
-games_today = get_collection("games_today")
-locations = get_collection("locations")
-players = get_collection("players")
 validator = input_validator.validator()
+db = firestore.client()
+players = db.collection('players')
+games = db.collection('games')
+locations = db.collection('locations')
 
-def create_game(data, games_store):
+def generate_id(created_by, created_at):
+    hash_input = f"{created_by}-{created_at}".encode('utf-8')
+    hash_output = hashlib.sha256(hash_input).hexdigest()
+    return hash_output
+
+
+def create_game(data, games_store = None):
     """
     data is a dict with the following keys and their types:
         start_time (str): that can be parsed as datetime
@@ -25,19 +33,18 @@ def create_game(data, games_store):
         return {"error": msg}
     
     try:
-        # normalize & add fields
         location_id = data.get("location_id")
-        location_details = locations.find_one({"_id": str(location_id)})
-        
+        location_details = locations.document(location_id).get().to_dict()
+        doc_id = str(generate_id(data.get("created_by"), datetime.now(UTC)))
+        doc_ref = games.document(doc_id)
         doc = {
-            "_id": generate_id(data.get("created_by"), datetime.now(UTC)),
             "created_at": datetime.now(UTC),
             "start_time": datetime.fromisoformat(data.get("start_time")),
             "end_time": datetime.fromisoformat(data.get("start_time")),  
             "title": data.get("title"),
-            "created_by": to_objectid(data.get("created_by")), 
+            "created_by": players.document(data.get("created_by")), 
             "roster": [{
-                'player_id': to_objectid(data.get("created_by")),
+                'player_id': players.document(data.get("created_by")),
                 'joined_at': datetime.now(UTC),
                 }],
             "status": "scheduled",
@@ -49,9 +56,8 @@ def create_game(data, games_store):
     except Exception as e:
         return {"error": str(e)}
     else:
-        result = games.insert_one(doc)
-        return {"sucess": str(result.inserted_id) }
-
+        doc_ref.set(doc)
+        return {"sucess": doc_id }
 
 def get_game(game_id):
     '''
@@ -61,20 +67,22 @@ def get_game(game_id):
     Returns:
         dict or None: The game document if found, otherwise None.
     '''
-    oid = to_objectid(game_id)
-    if oid is None:
+    if game_id is None:
         return None
-    doc = games.find_one({"_id": oid})
-    if doc:
-        doc["_id"] = str(doc["_id"])
-    return doc
+    
+    return games.document(game_id).get().to_dict()
 
-def list_games(filter={"status": {"$in": ["scheduled", "ongoing"]}}):
-    cursor = games.find(filter)
+
+def list_games(status_list=["scheduled", "ongoing"]):
+    query = games.where("status", "in", status_list)
+    results = query.stream()
+
     out = []
-    for d in cursor:
-        d["_id"] = str(d["_id"])
+    for doc in results:
+        d = doc.to_dict()
+        d["id"] = doc.id  # Firestore uses doc.id instead of _id
         out.append(d)
+
     return out
 
 # def join_game(game_id, player_id):

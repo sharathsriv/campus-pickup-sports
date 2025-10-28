@@ -9,8 +9,9 @@ game_id = model_games.create_game({
     'end_time': '2024-07-01T12:00:00Z',
     'title': 'Morning Soccer Match',
     'location_id': '1',
-    'created_by': '68feebb3b073f773742b4e37',
+    'created_by': 'Qe0ce7mOadXEQhfVKiXpDDMih2m2',
 })
+print(game_id)
 
 # TEST VALIDATOR to make sure it rejects invalid data:
     # Create another game at same location and time to test conflict
