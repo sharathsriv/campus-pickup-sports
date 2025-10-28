@@ -50,7 +50,7 @@ def create_game(data, games_store):
         return {"error": str(e)}
     else:
         result = games.insert_one(doc)
-        return str(result.inserted_id) 
+        return {"sucess": str(result.inserted_id) }
 
 
 def get_game(game_id):

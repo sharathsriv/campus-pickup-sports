@@ -1,3 +1,4 @@
+#### DEPRICATED FILE - REPLACED BY firebase####
 import os
 from pymongo import MongoClient
 from bson.objectid import ObjectId

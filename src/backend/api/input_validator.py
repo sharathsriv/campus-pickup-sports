@@ -15,9 +15,10 @@ class validator:
             input
                 - required fields are present
                 - field types are correct
-                - Make sure that loaction_id exists in locations collection
-                - Make sure player_id exists in players collection
-                - Check that start_time and end_time are valid ISO strings that can be parsed as datetime                    
+                - make sure that loaction_id exists in locations collection
+                - make sure player_id exists in players collection
+                - check that start_time and end_time are valid ISO strings that can be parsed as datetime                    
+                - check start time is after current time
             logic
                 - start_time is before end_time
                 - game length is a max of 2 hours   
