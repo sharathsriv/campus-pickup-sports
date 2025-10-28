@@ -21,7 +21,7 @@ pip install -r requirements.txt
 ### 2. Firebase Setup
 1. Go to your Firebase console → Project settings → Service accounts.
 2. Click "Generate new private key" and save the JSON key file.
-3. Place the key file in the `./src/backend` directory. After this replace the path to your key in the `./src/api/firebase_auth.py` file. **DO NOT PUSH THIS TO GITHUB.**
+3. Place the key file in the `./src/backend` directory. After this replace the path to your key in the `./src/api/firebase_auth.py` file. **DO NOT PUSH THIS TO GITHUB: Add the name of this key into .gitignore to avoid pushing it to main.** 
 script:
 ```python
 import firebase_admin
