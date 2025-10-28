@@ -3,7 +3,6 @@ from . import input_validator, firebase_auth
 import hashlib
 from firebase_admin import auth, firestore
 
-validator = input_validator.validator()
 db = firestore.client()
 players = db.collection('players')
 games = db.collection('games')
@@ -15,7 +14,7 @@ def generate_id(created_by, created_at):
     return hash_output
 
 
-def create_game(data, games_store = None):
+def create_game(data):
     """
     data is a dict with the following keys and their types:
         start_time (str): that can be parsed as datetime
@@ -26,10 +25,6 @@ def create_game(data, games_store = None):
     """
     if not isinstance(data, dict):
         return {"error": "invalid data format"}
-    
-    is_valid, msg = validator.validate_create_game(data, games_store, locations, players)
-    if not is_valid:
-        return {"error": msg}
     
     try:
         location_id = data.get("location_id")
@@ -73,7 +68,6 @@ def get_game(game_id):
     '''
     if game_id is None:
         return None
-    
     return games.document(game_id).get().to_dict()
 
 

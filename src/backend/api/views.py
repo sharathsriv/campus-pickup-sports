@@ -3,6 +3,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from . import model_games, model_players
+from firebase_admin import auth, firestore
+from . import input_validator, firebase_auth
+import json
+validator = input_validator.validator()
+db = firestore.client()
+players = db.collection('players')
+games = db.collection('games')
+locations = db.collection('locations')
 
 class PlayersAccountControllAPIView(APIView):
     """
@@ -59,26 +67,45 @@ class PlayersAccountAPIView(APIView):
             model_players.update_user_profile(player_id, update_data)
         return Response({"success": "Player profile updated"})
 
-# class GamesListCreateAPIView(APIView):
-#     """
-#     GET /api/games/   -> list games
-#     POST /api/games/  -> create game
-#     """
-#     def get(self, request):
-#         # optional filter params: sport, time range, etc.
-#         filter_q = {}
-#         sport = request.query_params.get("sport")
-#         if sport:
-#             filter_q["sport"] = sport
-#         games = model_games.list_games(filter_q)
-#         return Response(games)
-
-#     def post(self, request):
-#         ser = CreateGameSerializer(data=request.data)
-#         if not ser.is_valid():
-#             return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
-#         created_id = models_game.create_game(ser.validated_data)
-#         return Response({"id": created_id}, status=status.HTTP_201_CREATED)
+class GamesListCreateAPIView(APIView):
+    """
+    GET /api/games/   -> list games
+    """
+    def get(self, request, game_id):
+        game = model_games.get_game(game_id)
+        if not game:
+            return Response({"error": "Game not found"}, status=status.HTTP_404_NOT_FOUND) 
+        res = {
+            "created_at": game["created_at"].isoformat(),
+            "start_time": game["start_time"].isoformat(),
+            "end_time": game["end_time"].isoformat(),
+            "title": game["title"],
+            "created_by": game["created_by"].id,
+            "roster": [{
+                "player_id": player['player_id'].id,
+                "joined_at": player['joined_at'].isoformat()
+            } for player in game["roster"]],
+            "status": game["status"],
+            "location_id": game["location_id"],
+            "location_name": game["location_name"],
+            "max_players": game["max_players"],
+            "sport_type": game["sport_type"],
+        }
+        return Response(res, status=status.HTTP_200_OK)
+    """
+    POST /api/games/  -> create game
+    """
+    def post(self, request):
+        data = json.loads(request.body)
+        is_valid, msg = validator.validate_create_game(data, locations, players)
+        if not is_valid:
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+        game_response = model_games.create_game(data)
+        print(game_response)
+        if "error" in game_response:
+            return Response(game_response, status=status.HTTP_400_BAD_REQUEST)
+        created_id = game_response.get("sucess")
+        return Response({"id": created_id}, status=status.HTTP_201_CREATED)
 
 # class JoinGameAPIView(APIView):
 #     """
