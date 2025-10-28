@@ -20,12 +20,11 @@ class PlayersAccountControllAPIView(APIView):
         # token = request.query_params.get("token")
         # if not token:
         #     return Response({"error": "token required"}, status=status.HTTP_400_BAD_REQUEST)
-        player_id = model_players.user_login(token)
-        player_doc = model_players.get_player(player_id)
-        player_doc['id'] = player_id
-        if player_doc is None:
+        try:
+            player_id = model_players.user_login(token)
+        except:
             return Response({"error": "Player not found"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(player_doc)
+        return Response({"uid":player_id})
     """
     POST /api/sign_up/  -> create new player account
     """
@@ -76,7 +75,7 @@ class PlayersAccountAPIView(APIView):
 
 class GamesListCreateAPIView(APIView):
     """
-    GET /api/games/   -> list games
+    GET /api/games/{game_id}   -> list games
     """
     def get(self, request, game_id):
         game = model_games.get_game(game_id)
