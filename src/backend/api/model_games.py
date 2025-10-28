@@ -34,7 +34,7 @@ def create_game(data):
         doc = {
             "created_at": datetime.now(UTC),
             "start_time": datetime.fromisoformat(data.get("start_time")),
-            "end_time": datetime.fromisoformat(data.get("start_time")),  
+            "end_time": datetime.fromisoformat(data.get("end_time")),  
             "title": data.get("title"),
             "created_by": players.document(data.get("created_by")), 
             "roster": [{
@@ -114,6 +114,10 @@ def join_game(game_id, player_id):
         game_in_list = game_ref_in_list.get().to_dict()
         if not (game_data["end_time"] <= game_in_list["start_time"] or game_data["start_time"] >= game_in_list["end_time"]):
             return {"error": "Player has a conflicting game at the same time"}
+
+    # make sure that game start date is after the current time
+    if datetime.fromisoformat(game_data.get("start_time")) <= datetime.now(UTC):
+        return {"error": "Can only join scheduled games"}
 
     roster.append({
         'player_id': players.document(player_id),
