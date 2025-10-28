@@ -1,8 +1,7 @@
 from datetime import datetime, UTC
-import input_validator
+from . import input_validator, firebase_auth
 import hashlib
 from firebase_admin import auth, firestore
-import firebase_auth
 
 validator = input_validator.validator()
 db = firestore.client()
@@ -53,10 +52,15 @@ def create_game(data, games_store = None):
             "max_players": location_details.get("max_players"),
             "sport_type": location_details.get("sport_type"),
         }
+        doc_ref.set(doc)
     except Exception as e:
         return {"error": str(e)}
     else:
-        doc_ref.set(doc)
+        player_doc_ref = players.document(data.get("created_by"))
+        player_doc = player_doc_ref.get().to_dict()
+        upcoming_games = player_doc.get("upcoming_games", [])
+        upcoming_games.append(doc_ref)
+        player_doc_ref.update({"upcoming_games": upcoming_games})
         return {"sucess": doc_id }
 
 def get_game(game_id):
