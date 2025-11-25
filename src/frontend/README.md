@@ -37,9 +37,6 @@ For the course project, my responsibility was **frontend design and implementati
 ### Games List
 
 - “Pick-Up Sports Games” dashboard
-- Filters:
-  - **Sport** dropdown (All Sports, Basketball, Soccer, Volleyball, …)
-  - **Skill Level** dropdown (All Levels, Beginner, Intermediate, Advanced)
 - Responsive card layout for games:
   - Sport and skill badge
   - Location, date, time
@@ -152,7 +149,7 @@ To integrate with the real backend, we plan to:
   - `POST /api/games/{id}/join/` – join game
 - Hook Create Game page to `POST /api/games/`
 
-This work will be done by the backend owner and is **not part of my CS 520 frontend deliverable**.
+This work will be done by the other team members.
 
 ---
 
