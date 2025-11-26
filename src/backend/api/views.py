@@ -125,3 +125,16 @@ class JoinGameAPIView(APIView):
         if "error" in res:
             return Response(res, status=status.HTTP_400_BAD_REQUEST)
         return Response({"success": f"Player {player_id} joined game {game_id}"}, status=status.HTTP_200_OK)
+
+class LeaveGameAPIView(APIView):
+    """
+    POST /api/games/{game_id}/leave/  -> payload: { "player_id": "<playerId>" }
+    """
+    def post(self, request, game_id):
+        player_id = request.data.get("player_id")
+        if not player_id:
+            return Response({"error": "player_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        res = model_games.leave_game(game_id, player_id)
+        if "error" in res:
+            return Response(res, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"success": f"Player {player_id} left game {game_id}"}, status=status.HTTP_200_OK)

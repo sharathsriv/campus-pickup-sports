@@ -116,7 +116,7 @@ def join_game(game_id, player_id):
             return {"error": "Player has a conflicting game at the same time"}
 
     # make sure that game start date is after the current time
-    if datetime.fromisoformat(game_data.get("start_time")) <= datetime.now(UTC):
+    if datetime.fromisoformat(str(game_data.get("start_time"))) <= datetime.now(UTC):
         return {"error": "Can only join scheduled games"}
 
     roster.append({
@@ -130,3 +130,47 @@ def join_game(game_id, player_id):
     player_ref.update({"upcoming_games": scheduled_games})
 
     return {"sucess":game_id}
+
+def leave_game(game_id, player_id):
+    """
+    Remove a player from the roster if the player exists.
+    Returns updated doc or error.
+    """
+    
+    game_ref = games.document(game_id)
+    game_doc = game_ref.get()
+    if not game_doc.exists:
+        return {"error": "Game not found"}
+
+    game_data = game_doc.to_dict()
+    if game_data["status"] != "scheduled":
+        return {"error": "Cannot leave a game that is not scheduled"}
+
+    roster = game_data.get("roster", [])
+    if not any(player['player_id'].id == player_id for player in roster):
+        return {"error": "Player not in roster"}
+
+    player_ref = players.document(player_id)
+    if not player_ref.get().exists:
+        return {"error": "Player not found"}
+    
+    player_ref_data = player_ref.get().to_dict()
+    upcoming_player_games = player_ref_data.get("upcoming_games", [])
+    
+    
+    # remove player from game
+    updated_roster = [
+        entry for entry in roster 
+        if entry["player_id"].id != player_id
+    ]
+    game_ref.update({"roster": updated_roster})
+    
+    # remove game from player
+    updated_upcoming = [
+        g for g in upcoming_player_games 
+        if not (isinstance(g, firestore.DocumentReference) and g.id == game_id)
+    ]
+    player_ref.update({"upcoming_games": updated_upcoming})
+
+    return {"sucess":game_id}
+    
