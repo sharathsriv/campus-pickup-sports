@@ -39,16 +39,33 @@ const selectStyle = {
   backgroundColor: "#f9fafb",
 };
 
+// Generate time slots in 30-minute intervals for the whole day
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let hour = 0; hour < 24; hour++) {
+    for (let minute of [0, 30]) {
+      const date = new Date(2025, 0, 1, hour, minute);
+      const label = date.toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      }); // e.g. "6:00 AM"
+      const value = date.toTimeString().slice(0, 5); // "HH:MM"
+      slots.push({ label, value });
+    }
+  }
+  return slots;
+};
+
+const TIME_SLOTS = generateTimeSlots();
+
 export default function CreateGame({ onBack }) {
   const [form, setForm] = useState({
     title: "",
     sport: "Basketball",
-    level: "Beginner",
-    location: "",
+    location: "Sylvan Court 1",
     date: "",
-    time: "",
-    maxPlayers: "",
-    description: "",
+    startTime: "",
+    endTime: "",
   });
 
   const [message, setMessage] = useState("");
@@ -102,6 +119,7 @@ export default function CreateGame({ onBack }) {
               marginBottom: "16px",
             }}
           >
+            {/* Title - full width */}
             <div style={{ gridColumn: "1 / -1" }}>
               <Input
                 label="Title"
@@ -112,6 +130,7 @@ export default function CreateGame({ onBack }) {
               />
             </div>
 
+            {/* Sport (Basketball / Soccer only) */}
             <div>
               <label style={labelStyle}>Sport</label>
               <select
@@ -122,27 +141,10 @@ export default function CreateGame({ onBack }) {
               >
                 <option>Basketball</option>
                 <option>Soccer</option>
-                <option>Volleyball</option>
-                <option>Tennis</option>
-                <option>Baseball</option>
-                <option>Football</option>
               </select>
             </div>
 
-            <div>
-              <label style={labelStyle}>Skill Level</label>
-              <select
-                name="level"
-                value={form.level}
-                onChange={handleChange}
-                style={selectStyle}
-              >
-                <option>Beginner</option>
-                <option>Intermediate</option>
-                <option>Advanced</option>
-              </select>
-            </div>
-
+            {/* Date */}
             <div>
               <Input
                 label="Date"
@@ -153,55 +155,60 @@ export default function CreateGame({ onBack }) {
               />
             </div>
 
+            {/* Start Time dropdown */}
             <div>
-              <Input
-                label="Time"
-                name="time"
-                type="time"
-                value={form.time}
+              <label style={labelStyle}>Start Time</label>
+              <select
+                name="startTime"
+                value={form.startTime}
                 onChange={handleChange}
-              />
+                style={selectStyle}
+              >
+                <option value="">Select start time</option>
+                {TIME_SLOTS.map((slot) => (
+                  <option key={`start-${slot.value}`} value={slot.value}>
+                    {slot.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
+            {/* End Time dropdown */}
+            <div>
+              <label style={labelStyle}>End Time</label>
+              <select
+                name="endTime"
+                value={form.endTime}
+                onChange={handleChange}
+                style={selectStyle}
+              >
+                <option value="">Select end time</option>
+                {TIME_SLOTS.map((slot) => (
+                  <option key={`end-${slot.value}`} value={slot.value}>
+                    {slot.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Location dropdown - full width */}
             <div style={{ gridColumn: "1 / -1" }}>
-              <Input
-                label="Location"
+              <label style={labelStyle}>Location</label>
+              <select
                 name="location"
-                placeholder="Boyden Gym, Court 2"
                 value={form.location}
                 onChange={handleChange}
-              />
-            </div>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <Input
-                label="Max Players"
-                name="maxPlayers"
-                type="number"
-                placeholder="10"
-                value={form.maxPlayers}
-                onChange={handleChange}
-              />
-            </div>
-
-            <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyle}>Description</label>
-              <textarea
-                name="description"
-                rows={3}
-                placeholder="Quick casual game, all levels welcome."
-                value={form.description}
-                onChange={handleChange}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: "10px",
-                  border: "1px solid #e5e7eb",
-                  fontSize: "14px",
-                  backgroundColor: "#f9fafb",
-                  resize: "vertical",
-                }}
-              />
+                style={selectStyle}
+              >
+                <option>Sylvan Court 1</option>
+                <option>Southwest Court 1</option>
+                <option>Southwest Court 2</option>
+                <option>Boyden Court 1</option>
+                <option>Boyden Court 2</option>
+                <option>Rec Field 1</option>
+                <option>Rec Field 2</option>
+                <option>Rec Turf 1</option>
+              </select>
             </div>
           </div>
 
