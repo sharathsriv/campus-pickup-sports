@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timezone as dt_timezone, UTC
 
 class validator:
     '''
@@ -75,3 +75,61 @@ class validator:
         
         
         return True, "Valid data"
+    
+    @staticmethod
+    def validate_join_game(game_id, player_id, locations, players, games):
+        game_ref = games.document(game_id)
+        game_doc = game_ref.get()
+        if not game_doc.exists:
+            return False, "Game not found"
+
+        game_data = game_doc.to_dict()
+        if game_data["status"] != "scheduled":
+            return False, "Cannot join a game that is not scheduled"
+
+        roster = game_data.get("roster", [])
+        if any(player['player_id'].id == player_id for player in roster):
+            return False, "Player already in roster"
+
+        if len(roster) >= game_data["max_players"]:
+            return False, "Game is full"
+
+        player_ref = players.document(player_id)
+        if not player_ref.get().exists:
+            return False, "Player not found"
+        
+        player_ref_data = player_ref.get().to_dict()
+        ongoing_games = player_ref_data.get("ongoing_games", []) + player_ref_data.get("upcoming_games", [])
+        for game_ref_in_list in ongoing_games:
+            game_in_list = game_ref_in_list.get().to_dict()
+            if not (game_data["end_time"] <= game_in_list["start_time"] or game_data["start_time"] >= game_in_list["end_time"]):
+                return False, "Player has a conflicting game at the same time"
+
+        # make sure that game start date is after the current time
+        if datetime.fromisoformat(str(game_data.get("start_time"))) <= datetime.now(UTC):
+            return False, "Can only join scheduled games"
+
+        return True, game_id
+        
+    @staticmethod
+    def validate_leave_game(game_id, player_id, locations, players, games):
+        
+        game_ref = games.document(game_id)
+        game_doc = game_ref.get()
+        if not game_doc.exists:
+            return False, "Game not found"
+
+        game_data = game_doc.to_dict()
+        if game_data["status"] != "scheduled":
+            return False, "Cannot leave a game that is not scheduled"
+
+        roster = game_data.get("roster", [])
+        if not any(player['player_id'].id == player_id for player in roster):
+            return False, "Player not in roster"
+
+        player_ref = players.document(player_id)
+        if not player_ref.get().exists:
+            return False, "Player not found"
+
+        return True, game_id
+    

@@ -12,6 +12,9 @@ players = db.collection('players')
 games = db.collection('games')
 locations = db.collection('locations')
 
+"""
+Api endpoint to create new users and return the uid for the existing ones.
+"""
 class PlayersAccountControllAPIView(APIView):
     """
     GET /api/players/token  -> get account uid, and account details
@@ -32,14 +35,17 @@ class PlayersAccountControllAPIView(APIView):
         email = request.data.get("email")
         password = request.data.get("password")
         name = request.data.get("name")
-        if not email or not password or not name:
-            return Response({"error": "email, password, and name are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not (email or password or name):
+            return Response({"error": "email or password or name not provided"}, status=status.HTTP_400_BAD_REQUEST)
         user = model_players.create_firebase_user(email, password)
         if user is None:
             return Response({"error": "Failed to create user"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         model_players.add_user_profile(user, name, email)
         return Response({"uid": user.uid}, status=status.HTTP_201_CREATED)
 
+"""
+Api endpoint to get user accounts and update account name.
+"""
 class PlayersAccountAPIView(APIView):
     """
     GET /api/players/{player_id}/  -> get player details
@@ -73,9 +79,12 @@ class PlayersAccountAPIView(APIView):
             model_players.update_user_profile(player_id, update_data)
         return Response({"success": "Player profile updated"})
 
+"""
+Api endpoint to get game based on ID or to create a new game
+"""
 class GamesListCreateAPIView(APIView):
     """
-    GET /api/games/{game_id}   -> list games
+    GET /api/games/{game_id}   -> list game
     """
     def get(self, request, game_id):
         game = model_games.get_game(game_id)
@@ -113,14 +122,24 @@ class GamesListCreateAPIView(APIView):
         created_id = game_response.get("sucess")
         return Response({"id": created_id}, status=status.HTTP_201_CREATED)
 
+"""
+Api endpoint to add a player to a game ID.
+"""
 class JoinGameAPIView(APIView):
     """
     POST /api/games/{game_id}/join/  -> payload: { "player_id": "<playerId>" }
     """
     def post(self, request, game_id):
         player_id = request.data.get("player_id")
+        
         if not player_id:
             return Response({"error": "player_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        is_valid, msg = validator.validate_join_game(game_id, player_id, locations, players, games)
+        
+        if not is_valid:
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+        
         res = model_games.join_game(game_id, player_id)
         if "error" in res:
             return Response(res, status=status.HTTP_400_BAD_REQUEST)
@@ -134,6 +153,12 @@ class LeaveGameAPIView(APIView):
         player_id = request.data.get("player_id")
         if not player_id:
             return Response({"error": "player_id required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        is_valid, msg = validator.validate_leave_game(game_id, player_id, locations, players, games)
+        
+        if not is_valid:
+            return Response({"error": msg}, status=status.HTTP_400_BAD_REQUEST)
+        
         res = model_games.leave_game(game_id, player_id)
         if "error" in res:
             return Response(res, status=status.HTTP_400_BAD_REQUEST)
