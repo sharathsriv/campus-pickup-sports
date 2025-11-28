@@ -7,6 +7,9 @@ db = firestore.client()
 players = db.collection('players')
 games = db.collection('games')
 locations = db.collection('locations')
+in_memory = db.collection('in_memory')
+in_memory_ongoing = in_memory.document('ongoing')
+in_memory_scheduled = in_memory.document('scheduled')
 
 def generate_id(created_by, created_at):
     hash_input = f"{created_by}-{created_at}".encode('utf-8')
@@ -30,7 +33,7 @@ def create_game(data):
         location_id = data.get("location_id")
         location_details = locations.document(location_id).get().to_dict()
         doc_id = str(generate_id(data.get("created_by"), datetime.now(UTC)))
-        doc_ref = games.document(doc_id)
+        game_ref = games.document(doc_id)
         doc = {
             "created_at": datetime.now(UTC),
             "start_time": datetime.fromisoformat(data.get("start_time")),
@@ -47,14 +50,22 @@ def create_game(data):
             "max_players": location_details.get("max_players"),
             "sport_type": location_details.get("sport_type"),
         }
-        doc_ref.set(doc)
+        # add game to the games collection
+        game_ref.set(doc)
+        
+        in_memory_scheduled_storage = in_memory_scheduled.get().to_dict().get("storage", [])
+        if game_ref not in in_memory_scheduled_storage:
+            in_memory_scheduled_storage.append(game_ref)
+        in_memory_scheduled.update({"storage": in_memory_scheduled_storage})
+    
     except Exception as e:
         return {"error": str(e)}
     else:
+        # added game to the player's upcoming games
         player_doc_ref = players.document(data.get("created_by"))
         player_doc = player_doc_ref.get().to_dict()
         upcoming_games = player_doc.get("upcoming_games", [])
-        upcoming_games.append(doc_ref)
+        upcoming_games.append(game_ref)
         player_doc_ref.update({"upcoming_games": upcoming_games})
         return {"sucess": doc_id }
 
