@@ -67,7 +67,8 @@ class validator:
         ongoing_games = player_data.get("ongoing_games", []) + player_data.get("upcoming_games", [])
         for game_ref in ongoing_games:
             game = game_ref.get().to_dict()
-            if not (data["end_time"] <= game["start_time"] or data["start_time"] >= game["end_time"]):
+            
+            if not (end_time <= game["start_time"] or start_time >= game["end_time"]):
                 return False, "User cannot create two games that overlap in time"
         
         # Logical checks: No other games at the same location and time
