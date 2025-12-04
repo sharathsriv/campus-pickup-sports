@@ -1,7 +1,7 @@
-from datetime import datetime, UTC, timezone
+from datetime import datetime, UTC, timezone, timedelta
 from . import input_validator, firebase_auth
-import hashlib
 from firebase_admin import auth, firestore
+from django.core.mail import send_mail
 
 db = firestore.client()
 players = db.collection('players')
@@ -96,4 +96,33 @@ def check_game_status():
     in_memory_ongoing.set({"storage": new_ongoing})
 
 def email_upcoming_games():
-    pass
+    current_time = datetime.now(timezone.utc)
+    window_end = current_time + timedelta(minutes=30)
+
+    # Query games starting in the next 30 minutes
+    games_snapshot = games.stream()
+    for game_doc in games_snapshot:
+        game = game_doc.to_dict()
+        start_time = game.get("start_time")
+        if start_time and current_time <= start_time <= window_end:
+            # Get player emails
+            player_ids = game.get("players", [])
+            emails = []
+            for pid in player_ids:
+                player_doc = players.document(pid).get()
+                if player_doc.exists:
+                    player_data = player_doc.to_dict()
+                    email = player_data.get("email")
+                    if email:
+                        emails.append(email)
+            
+            # Send email to all players
+            if emails:
+                send_mail(
+                    subject=f"Your game {game.get("title")} starts soon!",
+                    message=f"Your game is scheduled to start at {start_time.isoformat()} in {game.get("location_name")}. Get ready!",
+                    from_email="settings.EMAIL_HOST_USER", # FIXME: Change email id
+                    recipient_list=emails,
+                    fail_silently=True,  
+                )
+                print(f"Sent reminders for game {game_doc.id} to {len(emails)} players")
