@@ -36,10 +36,13 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
     print("Firebase Admin SDK initialized successfully!")
 ```
-
----
+___
 
 ## 🏃‍♂️ Running the Server
+To start the Cron Job run:
+``` bash
+python manage.py qcluster
+```
 
 To start the Django server locally cd into `./src/backend`:
 ```bash

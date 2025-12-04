@@ -7,6 +7,9 @@ db = firestore.client()
 players = db.collection('players')
 games = db.collection('games')
 locations = db.collection('locations')
+in_memory = db.collection('in_memory')
+in_memory_ongoing = in_memory.document('ongoing')
+in_memory_scheduled = in_memory.document('scheduled')
 
 def generate_id(created_by, created_at):
     hash_input = f"{created_by}-{created_at}".encode('utf-8')
@@ -30,7 +33,7 @@ def create_game(data):
         location_id = data.get("location_id")
         location_details = locations.document(location_id).get().to_dict()
         doc_id = str(generate_id(data.get("created_by"), datetime.now(UTC)))
-        doc_ref = games.document(doc_id)
+        game_ref = games.document(doc_id)
         doc = {
             "created_at": datetime.now(UTC),
             "start_time": datetime.fromisoformat(data.get("start_time")),
@@ -47,14 +50,22 @@ def create_game(data):
             "max_players": location_details.get("max_players"),
             "sport_type": location_details.get("sport_type"),
         }
-        doc_ref.set(doc)
+        # add game to the games collection
+        game_ref.set(doc)
+        
+        in_memory_scheduled_storage = in_memory_scheduled.get().to_dict().get("storage", [])
+        if game_ref not in in_memory_scheduled_storage:
+            in_memory_scheduled_storage.append(game_ref)
+        in_memory_scheduled.update({"storage": in_memory_scheduled_storage})
+    
     except Exception as e:
         return {"error": str(e)}
     else:
+        # added game to the player's upcoming games
         player_doc_ref = players.document(data.get("created_by"))
         player_doc = player_doc_ref.get().to_dict()
         upcoming_games = player_doc.get("upcoming_games", [])
-        upcoming_games.append(doc_ref)
+        upcoming_games.append(game_ref)
         player_doc_ref.update({"upcoming_games": upcoming_games})
         return {"sucess": doc_id }
 
@@ -90,35 +101,12 @@ def join_game(game_id, player_id):
     """
     game_ref = games.document(game_id)
     game_doc = game_ref.get()
-    if not game_doc.exists:
-        return {"error": "Game not found"}
-
     game_data = game_doc.to_dict()
-    if game_data["status"] != "scheduled":
-        return {"error": "Cannot join a game that is not scheduled"}
-
     roster = game_data.get("roster", [])
-    if any(player['player_id'].id == player_id for player in roster):
-        return {"error": "Player already in roster"}
-
-    if len(roster) >= game_data["max_players"]:
-        return {"error": "Game is full"}
-
-    player_ref = players.document(player_id)
-    if not player_ref.get().exists:
-        return {"error": "Player not found"}
     
+    player_ref = players.document(player_id)
     player_ref_data = player_ref.get().to_dict()
-    ongoing_games = player_ref_data.get("ongoing_games", []) + player_ref_data.get("upcoming_games", [])
-    for game_ref_in_list in ongoing_games:
-        game_in_list = game_ref_in_list.get().to_dict()
-        if not (game_data["end_time"] <= game_in_list["start_time"] or game_data["start_time"] >= game_in_list["end_time"]):
-            return {"error": "Player has a conflicting game at the same time"}
-
-    # make sure that game start date is after the current time
-    if datetime.fromisoformat(game_data.get("start_time")) <= datetime.now(UTC):
-        return {"error": "Can only join scheduled games"}
-
+    
     roster.append({
         'player_id': players.document(player_id),
         'joined_at': datetime.now(UTC),
@@ -130,3 +118,35 @@ def join_game(game_id, player_id):
     player_ref.update({"upcoming_games": scheduled_games})
 
     return {"sucess":game_id}
+
+def leave_game(game_id, player_id):
+    """
+    Remove a player from the roster if the player exists.
+    Returns updated doc or error.
+    """
+    
+    game_ref = games.document(game_id)
+    game_doc = game_ref.get()
+    game_data = game_doc.to_dict()
+    roster = game_data.get("roster", [])
+    player_ref = players.document(player_id)
+    player_ref_data = player_ref.get().to_dict()
+    upcoming_player_games = player_ref_data.get("upcoming_games", [])
+    
+    
+    # remove player from game
+    updated_roster = [
+        entry for entry in roster 
+        if entry["player_id"].id != player_id
+    ]
+    game_ref.update({"roster": updated_roster})
+    
+    # remove game from player
+    updated_upcoming = [
+        g for g in upcoming_player_games 
+        if not (isinstance(g, firestore.DocumentReference) and g.id == game_id)
+    ]
+    player_ref.update({"upcoming_games": updated_upcoming})
+
+    return {"sucess":game_id}
+    
