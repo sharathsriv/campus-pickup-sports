@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     'rest_framework',
-    'api',
+    "django_q",
+    "api.apps.ApiConfig",
 ]
 
 MIDDLEWARE = [
@@ -125,3 +126,12 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+Q_CLUSTER = {
+    "name": "game_scheduler",
+    "workers": 1,
+    "recycle": 500,
+    "timeout": 60,
+    "retry": 120,
+    "orm": "default",
+}
