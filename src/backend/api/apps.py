@@ -19,8 +19,19 @@ class ApiConfig(AppConfig):
                     "api.cron.check_game_status",
                     name="game_status_check",
                     schedule_type=Schedule.MINUTES,
-                    minutes=5,
+                    minutes=1,
                 )
         except OperationalError:
             
+            pass
+        
+        try:
+            if not Schedule.objects.filter(name="upcoming_game_email").exists():
+                schedule(
+                    "api.cron.email_upcoming_games",
+                    name="upcoming_game_email",
+                    schedule_type=Schedule.MINUTES,
+                    minutes=30, 
+                )
+        except OperationalError:
             pass
