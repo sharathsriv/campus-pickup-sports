@@ -23,41 +23,63 @@ export default function Games({ currentUser, onCreateGameClick }) {
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const mapGames = (data) =>
+    data.map((g) => ({
+      id: g.id,
+      sport: g.sport_type || "Basketball",
+      level: "All Levels",
+      title: g.title,
+      location: g.location_name,
+      date: g.start_time?.slice(0, 10),
+      time: `${g.start_time?.slice(11, 16)} - ${g.end_time?.slice(11, 16)}`,
+      players: (g.roster || []).length,
+      spotsLeft: (g.max_players || 0) - (g.roster || []).length,
+      organizer: g.created_by,
+    }));
+
+  const loadGames = async () => {
+    setLoading(true);
+    try {
+      const data = await api.getGames();
+      setGames(mapGames(data));
+    } catch (err) {
+      console.error("Failed to load games", err);
+      alert("Failed to load games from backend.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await api.getGames();
-        setGames(data);
-      } catch (err) {
-        console.error("Failed to load games", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    loadGames();
   }, []);
 
   const filteredGames = games.filter((g) => {
-    const bySport =
-      sportFilter === "All Sports" ? true : g.sport === sportFilter;
-    const byLevel =
-      levelFilter === "All Levels" ? true : g.level === levelFilter;
+    const bySport = sportFilter === "All Sports" ? true : g.sport === sportFilter;
+    const byLevel = levelFilter === "All Levels" ? true : g.level === levelFilter;
     return bySport && byLevel;
   });
 
   const handleJoin = async (game) => {
     try {
       await api.joinGame(game.id, currentUser?.uid || "mock-user-id");
+      await loadGames(); // refresh to update spots
       alert(`Joined ${game.sport} game!`);
     } catch (err) {
       console.error(err);
-      alert("Failed to join (mock).");
+      alert(err.message || "Failed to join game.");
     }
   };
 
-  const handleLeave = (game) => {
-    alert(`Left ${game.sport} game (mock).`);
+  const handleLeave = async (game) => {
+    try {
+      await api.leaveGame(game.id, currentUser?.uid || "mock-user-id");
+      await loadGames(); // refresh to update spots
+      alert(`Left ${game.sport} game.`);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to leave game.");
+    }
   };
 
   return (
@@ -71,7 +93,6 @@ export default function Games({ currentUser, onCreateGameClick }) {
       }}
     >
       <div style={{ maxWidth: "1120px", width: "100%" }}>
-        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -95,9 +116,27 @@ export default function Games({ currentUser, onCreateGameClick }) {
           </Button>
         </div>
 
-        {/* Filters */}
-        {/* (rest of file unchanged) */}
-        {/* ... keep your existing filters and cards code here ... */}
+        <div
+          style={{
+            display: "flex",
+            gap: "12px",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+          }}
+        >
+          <Dropdown
+            label="Sport"
+            options={SPORT_OPTIONS}
+            value={sportFilter}
+            onChange={setSportFilter}
+          />
+          <Dropdown
+            label="Skill Level"
+            options={LEVEL_OPTIONS}
+            value={levelFilter}
+            onChange={setLevelFilter}
+          />
+        </div>
 
         {loading ? (
           <p style={{ color: "#6b7280", fontSize: "14px" }}>Loading games...</p>
