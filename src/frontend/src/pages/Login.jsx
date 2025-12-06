@@ -25,7 +25,7 @@ export default function Login({ onLoginSuccess }) {
     try {
       let user;
       if (activeTab === "login") {
-        user = await api.login(form.email, form.password);
+        user = await api.login(form.email, form.password); // password unused in current backend flow
       } else {
         user = await api.signup(form.name, form.email, form.password);
       }
