@@ -1,110 +1,59 @@
-# UMass PickUp Sports
+# UMass PickUp Sports (Frontend)
 
-A web application that helps UMass students find and join casual pick-up sports games on campus.
-
-This project was built as the final project for **CS 520 – Theory and Practice of Software Engineering**.
+A React + Vite web app for discovering and joining campus pick-up sports games on campus. Built for **CS 520 – Theory and Practice of Software Engineering**.
 
 ---
 
 ## 1. Overview
 
-The system has two major parts:
+- **Backend (teammate)** – Django + Firebase (Firestore + Firebase Auth via Admin SDK), exposes `/api/...`.
+- **Frontend** – React + Vite (this repo), now wired to the backend APIs.
 
-- **Backend (teammate)** – Django + Firebase
-  - Manages players, games, and join requests
-  - Exposes REST APIs under `/api/...`
-
-- **Frontend (this work)** – React + Vite
-  - Fully implemented by Angad
-  - Implements all user-facing screens and interactions
-  - Currently uses **mock APIs** for demo (no backend required)
-
-For the course project, my responsibility was **frontend design and implementation**: turning our Figma mockups into a working web UI.
+Roles:
+- Kirat Arora – Backend
+- Angad Deep Singh – Frontend UI
+- Rohit Reddy Goli – Architecture / testing
+- Sharath Srivatsan Manivannan – Integration (frontend ↔ backend)
 
 ---
 
-## 2. Features (Frontend)
+## 2. Current Behavior
 
-### Authentication UI
-
-- Login / Sign Up tabs on a single screen
-- Input validation on the client side (required fields)
-- Friendly error messages and loading states
-
-> Note: Login / Signup currently use a **mock API**.  
-> The real authentication flow will be wired to Firebase by the backend owner.
-
-### Games List
-
-- “Pick-Up Sports Games” dashboard
-- Responsive card layout for games:
-  - Sport and skill badge
-  - Location, date, time
-  - Players and spots left
-  - Organizer name
-- Buttons:
-  - **Join Game** (mock – shows success alert)
-  - **Leave** (mock)
-
-### Create Game (UI only)
-
-- Dedicated page with a form to create a new game:
-  - Title
-  - Sport
-  - Skill level
-  - Location
-  - Date & time
-  - Max players
-  - Description
-- “Create Game (Mock)” button logs payload to console and shows success message
-- “Back to Games” button returns to the games list
-
-This page is intentionally **frontend-only**: it demonstrates the user flow and UI, and can later be connected to a real `/api/games/` endpoint.
+- Sign Up: Calls backend `POST /api/players/` to create Firebase user + player profile.
+- Login: Still mock-token-based (not yet using Firebase client SDK). Use Sign Up to get a valid `uid`.
+- Games list: Calls backend `GET /api/games/`.
+- Create Game: Calls backend `POST /api/games/` (requires valid `created_by` uid, future start time, ≤2h duration).
+- Join / Leave: Calls backend `POST /api/games/{id}/join/` and `/leave/`, then reloads list to update spots.
 
 ---
 
 ## 3. Tech Stack
 
-- **Frontend:** React (Vite)
-- **Language:** JavaScript (ES6+)
-- **Styling:** Inline styles + small global reset
-- **State Management:** React hooks (`useState`, `useEffect`)
-- **Mock Data:** Local `mock/games.js` and `api/index.js`
+- React (Vite), JavaScript (ES6+)
+- Inline styles + small global reset
+- State via React hooks (`useState`, `useEffect`)
+- API calls via `fetch` in `src/api/index.js`
 
 ---
 
-## 4. Project Structure
+## 4. Project Structure (frontend)
 
-```text
-campus-pickup-sports/
-├── backend/            # Django backend (teammate's work)
-├── frontend/           # React frontend (this work)
-│   ├── src/
-│   │   ├── api/        # Mock API wrapper
-│   │   ├── components/ # Reusable UI components
-│   │   │   ├── Button.jsx
-│   │   │   ├── Dropdown.jsx
-│   │   │   ├── GameCard.jsx
-│   │   │   └── Input.jsx
-│   │   ├── mock/       # Mock games data
-│   │   │   └── games.js
-│   │   ├── pages/      # Top-level screens
-│   │   │   ├── Login.jsx
-│   │   │   ├── Games.jsx
-│   │   │   └── CreateGame.jsx
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── package.json
-│   └── vite.config.js
-└── README.md           # This file
+```
+frontend/
+├── src/
+│   ├── api/            # API wrapper (calls Django backend)
+│   ├── components/     # Button, Dropdown, GameCard, Input
+│   ├── pages/          # Login, Games, CreateGame
+│   ├── App.jsx
+│   ├── main.jsx
+│   └── index.css
+├── package.json
+└── vite.config.js
 ```
 
 ---
 
-## 5. Running the Frontend (Mock Mode – No Backend Needed)
-
-You can run and demo the UI without starting Django or Firebase.
+## 5. Running the Frontend
 
 ```bash
 cd frontend
@@ -112,54 +61,39 @@ npm install
 npm run dev
 ```
 
-Then open:
+Open: http://localhost:5173
 
-- http://localhost:5173
-
-Flows to try:
-
-1. **Sign Up → Games**
-   - Click _Sign Up_ tab
-   - Enter name, email, password
-   - You are taken to the Games dashboard (mock user)
-
-2. **Filter Games**
-   - Change Sport / Skill Level filters
-   - Cards update based on selected filters
-
-3. **Join / Leave Game**
-   - Click **Join Game** → shows a success alert (mock)
-   - Click **Leave** → shows a mock message
-
-4. **Create Game**
-   - Click **+ Create Game**
-   - Fill the form and press **Create Game (Mock)**
-   - Data is logged in the browser console
+Environment variable (create `frontend/.env`):
+```
+VITE_API_BASE=http://127.0.0.1:8000/api
+```
 
 ---
 
-## 6. Backend Integration (Future Work)
+## 6. Flows to Try (integrated)
 
-Right now the frontend uses a **mock API** in `src/api/index.js`.  
-To integrate with the real backend, we plan to:
-
-- Replace mock calls with `axios` requests to:
-  - `POST /api/players/` – create player
-  - `GET /api/games/` – list games
-  - `POST /api/games/{id}/join/` – join game
-- Hook Create Game page to `POST /api/games/`
-
-This work will be done by the other team members.
+1) **Sign Up → Games**
+   - Use Sign Up (not Login) to create a user; this gives you a valid `uid` for create/join.
+2) **Create Game**
+   - Future date/time, duration ≤ 2 hours, valid location_id (e.g., “1”).
+   - Should appear on Games list after creation.
+3) **Join / Leave**
+   - Join should succeed and spots update after the list reloads.
+   - Leave should restore spots.
 
 ---
 
-## 7. My Contributions (Angad – Frontend)
+## 7. Future Work (Auth)
 
-- Set up React + Vite project inside the shared repo
-- Implemented:
-  - Login / Sign Up UI with tab switching
-  - Games dashboard UI and layout
-  - GameCard, Dropdown, Button, and Input reusable components
-  - Create Game UI page and navigation
-- Implemented mock API and data layer so the entire frontend can be demoed without a running backend
-- Ensured the implementation matches the Figma mockups provided in the mid-project report
+- Implement Firebase client SDK on the frontend.
+- On Login, obtain Firebase ID token and call `GET /api/players/?token=<idToken>` to resolve `uid`.
+- Persist session to avoid re-signup.
+
+---
+
+## 8. Credits
+
+- Frontend UI: Angad Deep Singh
+- Integration and wiring to backend APIs: Sharath Srivatsan Manivannan
+- Backend: Kirat Arora
+- Architecture/testing: Rohit Reddy Goli

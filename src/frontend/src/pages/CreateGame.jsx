@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Input from "../components/Input";
 import Button from "../components/Button";
+import * as api from "../api";
 
 const containerStyle = {
   minHeight: "100vh",
@@ -48,7 +49,7 @@ const generateTimeSlots = () => {
       const label = date.toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",
-      }); // e.g. "6:00 AM"
+      });
       const value = date.toTimeString().slice(0, 5); // "HH:MM"
       slots.push({ label, value });
     }
@@ -58,11 +59,11 @@ const generateTimeSlots = () => {
 
 const TIME_SLOTS = generateTimeSlots();
 
-export default function CreateGame({ onBack }) {
+export default function CreateGame({ onBack, currentUser }) {
   const [form, setForm] = useState({
     title: "",
     sport: "Basketball",
-    location: "Sylvan Court 1",
+    location: "1", // location_id (must exist in Firestore)
     date: "",
     startTime: "",
     endTime: "",
@@ -75,10 +76,31 @@ export default function CreateGame({ onBack }) {
     setForm((f) => ({ ...f, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Mock game created:", form);
-    setMessage("Game created (mock only – UI demo).");
+    setMessage("");
+    if (!currentUser?.uid) {
+      setMessage("Please sign up or log in first.");
+      return;
+    }
+    try {
+      // Build ISO strings with offset for Python fromisoformat
+      const startIso = `${form.date}T${form.startTime}:00+00:00`;
+      const endIso = `${form.date}T${form.endTime}:00+00:00`;
+      const payload = {
+        title: form.title,
+        sport_type: form.sport,
+        location_id: form.location,
+        start_time: startIso,
+        end_time: endIso,
+        created_by: currentUser.uid,
+      };
+      await api.createGame(payload);
+      setMessage("Game created!");
+    } catch (err) {
+      console.error(err);
+      setMessage("Failed to create game.");
+    }
   };
 
   return (
@@ -98,7 +120,7 @@ export default function CreateGame({ onBack }) {
               Create a Pick-Up Game
             </h1>
             <p style={{ fontSize: "14px", color: "#6b7280" }}>
-              Fill out the details below to create a new game (frontend mock).
+              Fill out the details below to create a new game.
             </p>
           </div>
 
@@ -119,7 +141,6 @@ export default function CreateGame({ onBack }) {
               marginBottom: "16px",
             }}
           >
-            {/* Title - full width */}
             <div style={{ gridColumn: "1 / -1" }}>
               <Input
                 label="Title"
@@ -130,7 +151,6 @@ export default function CreateGame({ onBack }) {
               />
             </div>
 
-            {/* Sport (Basketball / Soccer only) */}
             <div>
               <label style={labelStyle}>Sport</label>
               <select
@@ -144,7 +164,6 @@ export default function CreateGame({ onBack }) {
               </select>
             </div>
 
-            {/* Date */}
             <div>
               <Input
                 label="Date"
@@ -155,7 +174,6 @@ export default function CreateGame({ onBack }) {
               />
             </div>
 
-            {/* Start Time dropdown */}
             <div>
               <label style={labelStyle}>Start Time</label>
               <select
@@ -173,7 +191,6 @@ export default function CreateGame({ onBack }) {
               </select>
             </div>
 
-            {/* End Time dropdown */}
             <div>
               <label style={labelStyle}>End Time</label>
               <select
@@ -191,7 +208,6 @@ export default function CreateGame({ onBack }) {
               </select>
             </div>
 
-            {/* Location dropdown - full width */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label style={labelStyle}>Location</label>
               <select
@@ -200,14 +216,15 @@ export default function CreateGame({ onBack }) {
                 onChange={handleChange}
                 style={selectStyle}
               >
-                <option>Sylvan Court 1</option>
-                <option>Southwest Court 1</option>
-                <option>Southwest Court 2</option>
-                <option>Boyden Court 1</option>
-                <option>Boyden Court 2</option>
-                <option>Rec Field 1</option>
-                <option>Rec Field 2</option>
-                <option>Rec Turf 1</option>
+                {/* values must match Firestore doc IDs */}
+                <option value="1">Sylvan Court 1</option>
+                <option value="2">Southwest Court 1</option>
+                <option value="3">Southwest Court 2</option>
+                <option value="4">Boyden Court 1</option>
+                <option value="5">Boyden Court 2</option>
+                <option value="6">Rec Field 1</option>
+                <option value="7">Rec Field 2</option>
+                <option value="8">Rec Turf 1</option>
               </select>
             </div>
           </div>
@@ -216,7 +233,7 @@ export default function CreateGame({ onBack }) {
             <p
               style={{
                 fontSize: "14px",
-                color: "#16a34a",
+                color: message.includes("Failed") ? "#ef4444" : "#16a34a",
                 marginBottom: "12px",
               }}
             >
@@ -225,19 +242,8 @@ export default function CreateGame({ onBack }) {
           )}
 
           <Button fullWidth type="submit">
-            Create Game (Mock)
+            Create Game
           </Button>
-
-          <p
-            style={{
-              marginTop: "8px",
-              fontSize: "12px",
-              color: "#9ca3af",
-            }}
-          >
-            Note: This page is purely frontend UI. Data is not saved to the
-            backend.
-          </p>
         </form>
       </div>
     </div>

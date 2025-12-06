@@ -7,8 +7,8 @@ export default function App() {
   const [screen, setScreen] = useState("login"); // "login" | "games" | "createGame"
   const [user, setUser] = useState(null);
 
-  const handleLoginSuccess = (fakeUser) => {
-    setUser(fakeUser);
+  const handleLoginSuccess = (newUser) => {
+    setUser(newUser);
     setScreen("games");
   };
 
@@ -28,7 +28,9 @@ export default function App() {
         <Games currentUser={user} onCreateGameClick={handleGoToCreateGame} />
       )}
 
-      {screen === "createGame" && <CreateGame onBack={handleBackToGames} />}
+      {screen === "createGame" && (
+        <CreateGame currentUser={user} onBack={handleBackToGames} />
+      )}
     </div>
   );
 }
